@@ -120,7 +120,7 @@ public class GameLoop
     private readonly GameState _state;
     private readonly ConnectionManager _connections;
     private readonly TimeSpan _tickInterval;
-
+    private long _currentTick = 0;
     public GameLoop(GameState state, ConnectionManager connections, int tickRate)
     {
         _state = state;
@@ -151,6 +151,8 @@ public class GameLoop
 
     private void Tick()
     {
+        _currentTick++;
+
         const float speedPerTick = 0.1f;
         var snapshots = new List<PlayerSnapshot>();
 
@@ -162,15 +164,17 @@ public class GameLoop
             snapshots.Add(new PlayerSnapshot(player.Id, player.X, player.Y));
         }
 
-        BroadcastSnapshots(snapshots);
+        BroadcastSnapshots(_currentTick, snapshots);
     }
 
-    private void BroadcastSnapshots(List<PlayerSnapshot> snapshots)
+    private void BroadcastSnapshots(long tick, List<PlayerSnapshot> snapshots)
     {
         if (snapshots.Count == 0)
             return;
+        
+        var worldSnapshot = new WorldSnapshot(tick, snapshots);
 
-        var json = JsonSerializer.Serialize(snapshots);
+        var json = JsonSerializer.Serialize(worldSnapshot);
         var bytes = Encoding.UTF8.GetBytes(json);
 
         foreach (var socket in _connections.GetAll())
@@ -248,3 +252,8 @@ public static class Serialization
         PropertyNameCaseInsensitive = true
     };
 }
+
+public record WorldSnapshot(
+    long Tick,
+    IReadOnlyList<PlayerSnapshot> Players
+);
