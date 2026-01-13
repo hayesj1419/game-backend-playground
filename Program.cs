@@ -1,10 +1,3 @@
-using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.Net.WebSockets;
-using System.Text;
-using System.Text.Json;
-
-using GameServer.Dtos;
 using GameServer.Game;
 using GameServer.Networking;
 // --------------------
@@ -12,19 +5,23 @@ using GameServer.Networking;
 // --------------------
 
 var builder = WebApplication.CreateBuilder(args);
+
 var app = builder.Build();
 
-app.UseWebSockets();
+app.UseWebSockets(new WebSocketOptions
+{
+    KeepAliveInterval = TimeSpan.FromSeconds(120)
+});
 
 // --------------------
-// Global state
+// Authoritative systems
 // --------------------
 
 var gameState = new GameState();
 var connections = new ConnectionManager();
+var gameLoop = new GameLoop(gameState, connections, tickRate: 2);
 
 // Start game loop
-var gameLoop = new GameLoop(gameState, connections, tickRate: 2);
 gameLoop.Start();
 
 // --------------------
@@ -41,6 +38,7 @@ app.Map("/ws", async context =>
 
     var socket = await context.WebSockets.AcceptWebSocketAsync();
 
+    // Server-owned identity
     var playerId = Guid.NewGuid();
     var player = new Player { Id = playerId };
 
@@ -48,9 +46,11 @@ app.Map("/ws", async context =>
     connections.Add(playerId, socket);
 
     Console.WriteLine($"Player connected: {playerId}");
-
+    
+    // Hand off to networking layer
     await WebSocketHandler.HandleAsync(socket, playerId, gameState);
 
+    // Cleanup on disconnect
     connections.Remove(playerId);
     gameState.Players.TryRemove(playerId, out _);
 
