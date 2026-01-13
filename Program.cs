@@ -1,0 +1,176 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Net.WebSockets;
+using System.Text;
+using System.Text.Json;
+
+
+var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+/* 
+
+    * Global authoritative game state
+    * Lives for the lifetime of the server
+    */
+
+var gameState = new GameState();
+var gameLoop = new GameLoop(gameState, tickRate: 2);
+/*var testPlayerId = Guid.NewGuid();
+gameState.Players[testPlayerId] = new Player
+{
+    Id = testPlayerId,
+    X = 0,
+    Y = 0,
+}; */
+
+gameLoop.Start();
+
+app.MapGet("/", () => "Game server running");
+app.UseWebSockets();
+app.Map("/ws", async context =>
+{
+    if (!context.WebSockets.IsWebSocketRequest)
+    {
+        context.Response.StatusCode = 400;
+        return;
+    }
+
+    using var socket = await context.WebSockets.AcceptWebSocketAsync();
+
+    var playerId = Guid.NewGuid();
+    var player = new Player { Id = playerId };
+
+    gameState.Players[playerId] = player;
+    
+    await HandleClient(socket, playerId, gameState);
+    gameState.Players.TryRemove(playerId, out _);
+    
+});
+app.Run();
+
+/* 
+ * ====================================
+ * Core domain models
+ * =========================
+ */
+static async Task HandleClient(
+    WebSocket socket,
+    Guid playerId,
+    GameState gameState)
+{
+    var buffer = new byte[1024];
+
+    while (socket.State == WebSocketState.Open)
+    {
+        var result = await socket.ReceiveAsync(
+            new ArraySegment<byte>(buffer),
+            CancellationToken.None
+        );
+
+        if (result.MessageType == WebSocketMessageType.Close)
+           break;
+        
+        var json = Encoding.UTF8.GetString(buffer, 0, result.Count);
+
+        PlayerInput? input;
+        try
+        {
+            input = JsonSerializer.Deserialize<PlayerInput>(json, Serialization.JsonOptions);
+        }
+        catch
+        {
+            continue;
+        }
+        if(input == null)
+            continue;
+        
+        if(gameState.Players.TryGetValue(playerId, out var player))
+        {
+            player.InputX = input.X;
+            player.InputY = input.Y;
+        }
+    }
+
+    await socket.CloseAsync(
+        WebSocketCloseStatus.NormalClosure,
+        "Closing",
+        CancellationToken.None
+    );
+}
+public class GameState
+{
+    public ConcurrentDictionary<Guid, Player> Players { get; } = new();
+
+}
+
+public class Player
+{
+    public Guid Id { get; init; }
+    // Authoritative state
+    public float X { get; set; }
+    public float Y { get; set; }
+
+    // Last received input
+    public float InputX { get; set;}
+    public float InputY { get; set;}
+}
+public record PlayerInput(float X, float Y );
+public class GameLoop
+{
+    private readonly GameState _state;
+    private readonly int _tickRate;
+    private readonly TimeSpan _tickInterval;
+    private CancellationTokenSource _cts = new();
+
+    public GameLoop(GameState state, int tickRate = 30)
+    {
+        _state = state;
+        _tickRate = tickRate;
+        _tickInterval = TimeSpan.FromMilliseconds(1000.0 / _tickRate);
+    }
+
+    public void Start()
+    {
+        Task.Run(async () =>
+        {
+            var stopwatch = Stopwatch.StartNew();
+
+            while (!_cts.IsCancellationRequested)
+            {
+                var tickStart = stopwatch.Elapsed;
+
+                Tick();
+
+                var elapsed = stopwatch.Elapsed - tickStart;
+                var delay = _tickInterval - elapsed;
+
+                if (delay > TimeSpan.Zero)
+                    await Task.Delay(delay);                           
+            }
+        });
+    }
+
+    private void Tick()
+{
+    const float speedPerTick = 0.1f;
+
+    foreach (var player in _state.Players.Values)
+    {
+        player.X += player.InputX * speedPerTick;
+        player.Y += player.InputY * speedPerTick;
+    }
+}
+
+}
+
+public static class Serialization
+{
+    public static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+}
+
+
+
