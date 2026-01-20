@@ -9,15 +9,22 @@ namespace GameServer.Game;
 public class GameLoop
 {
     private readonly GameState _state;
+    private readonly int _snapshotEveryNTicks;
     private readonly ConnectionManager _connections;
     private readonly TimeSpan _tickInterval;
     private long _currentTick = 0;
 
-    public GameLoop(GameState state, ConnectionManager connections, int tickRate)
+    public GameLoop(
+        GameState state, 
+        ConnectionManager connections, 
+        int tickRate,
+        int snapshotRate)
     {
         _state = state;
         _connections = connections;
         _tickInterval = TimeSpan.FromMilliseconds(1000.0 / tickRate);
+        
+        _snapshotEveryNTicks = tickRate / snapshotRate;
     }
 
     public void Start()
@@ -64,7 +71,10 @@ public class GameLoop
             players.Add(new PlayerSnapshot(player.Id, player.X, player.Y));
         }
 
-        await Broadcast(new WorldSnapshot(_currentTick, players));
+        if (_currentTick % _snapshotEveryNTicks == 0)
+        {
+            await Broadcast(new WorldSnapshot(_currentTick, players));
+        }
     }
 
     private async Task Broadcast(WorldSnapshot snapshot)

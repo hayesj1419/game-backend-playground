@@ -19,7 +19,7 @@ app.UseWebSockets(new WebSocketOptions
 
 var gameState = new GameState();
 var connections = new ConnectionManager();
-var gameLoop = new GameLoop(gameState, connections, tickRate: 2);
+var gameLoop = new GameLoop(gameState, connections, tickRate: 30, snapshotRate: 10);
 
 // Start game loop
 gameLoop.Start();
