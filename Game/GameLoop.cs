@@ -2,7 +2,9 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using GameServer.Dtos;
+using GameServer.Infrastructure;
 using GameServer.Networking;
+using Microsoft.AspNetCore.Http.Json;
 
 namespace GameServer.Game;
 
@@ -79,7 +81,14 @@ public class GameLoop
 
     private async Task Broadcast(WorldSnapshot snapshot)
     {
-        var json = JsonSerializer.Serialize(snapshot);
+        var payload = new
+        {
+            type = "snapshot",
+            tick = snapshot.Tick,
+            players = snapshot.Players
+        };
+
+        var json = JsonSerializer.Serialize(payload, Serialization.JsonOptions);
         var bytes = Encoding.UTF8.GetBytes(json);
 
         foreach (var socket in _connections.GetAll())

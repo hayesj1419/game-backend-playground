@@ -28,14 +28,29 @@ public static class WebSocketHandler
 
             var json = Encoding.UTF8.GetString(buffer, 0, result.Count);
 
-            PlayerInput? input;
+            JsonDocument doc;
             try
             {
-                input = JsonSerializer.Deserialize<PlayerInput>(
-                    json,
-                    Serialization.JsonOptions
-                );
+                doc = JsonDocument.Parse(json);
             }
+            catch
+            {
+                continue;
+            }
+
+            if(!doc.RootElement.TryGetProperty("type", out var typeElement))
+                continue;
+            var type = typeElement.GetString();
+            if(type == "input")
+            {
+                PlayerInput? input;
+                try
+                {
+                    input = JsonSerializer.Deserialize<PlayerInput>(
+                        json,
+                        Serialization.JsonOptions
+                    );
+                }
             catch
             {
                 continue;
@@ -48,7 +63,10 @@ public static class WebSocketHandler
             {
                 player.InputX = input.X;
                 player.InputY = input.Y;
+
+                Console.WriteLine($"Received input: {input.X}, {input.Y}");
             }
         }
     }
+}
 }
