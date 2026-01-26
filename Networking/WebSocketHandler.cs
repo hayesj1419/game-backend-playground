@@ -14,6 +14,24 @@ public static class WebSocketHandler
         Guid playerId,
         GameState gameState)
     {
+        var welcome = new
+        {
+            type = "welcome",
+            playerId = playerId.ToString()
+        };
+
+        var welcomeJson = JsonSerializer.Serialize(welcome, Serialization.JsonOptions);
+        var welcomeBytes = Encoding.UTF8.GetBytes(welcomeJson);
+        
+        await socket.SendAsync(
+            new ArraySegment<byte>(welcomeBytes),
+            WebSocketMessageType.Text,
+            true,
+            CancellationToken.None
+        );
+        
+        Console.WriteLine($"[SERVER] Sent welcome to {playerId}");
+
         var buffer = new byte[1024];
 
         while (socket.State == WebSocketState.Open)
