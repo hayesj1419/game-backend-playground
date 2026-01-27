@@ -1,3 +1,5 @@
+using System;
+
 namespace GameServer.Game.Simulation
 {
     public static class MovementSystem
@@ -9,6 +11,16 @@ namespace GameServer.Game.Simulation
         float inputY,
         float speedPerTick)
     {
+        // Compute input magnitude
+        var magnitude = MathF.Sqrt(inputX * inputX + inputY * inputY);
+
+        if (magnitude > 1f)
+            {
+                // Normalize input to prevent faster diagonal movement
+                inputX /= magnitude;
+                inputY /= magnitude;
+            }
+
         x += inputX * speedPerTick;
         y += inputY * speedPerTick;
 

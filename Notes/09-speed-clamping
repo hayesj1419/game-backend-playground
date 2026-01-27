@@ -1,0 +1,40 @@
+# Speed Clamping
+
+## Purpose
+Speed clamping ensures that player movement per tick does not exceed the
+server-defined maximum, regardless of input direction or magnitude.
+
+This prevents:
+- diagonal movement speed boosts
+- malicious or invalid client input
+- inconsistencies between server and client prediction
+
+---
+
+## Rule
+
+> Input vectors with magnitude greater than 1 are normalized before movement
+> is applied.
+
+This means:
+- all directions are treated equally
+- direction is preserved
+- maximum speed is enforced by the server
+
+---
+
+## Implementation
+
+Speed clamping is implemented in:
+
+Game/Simulation/MovementSystem.cs
+
+```csharp
+
+/*var magnitude = MathF.Sqrt(inputX * inputX + inputY * inputY);
+
+if (magnitude > 1f)
+{
+    inputX /= magnitude;
+    inputY /= magnitude;
+}
