@@ -4,6 +4,7 @@ using System.Text.Json;
 using GameServer.Dtos;
 using GameServer.Infrastructure;
 using GameServer.Networking;
+using GameServer.Game.Simulation;
 using Microsoft.AspNetCore.Http.Json;
 
 namespace GameServer.Game;
@@ -67,8 +68,13 @@ public class GameLoop
 
         foreach (var player in _state.Players.Values)
         {
-            player.X += player.InputX * speedPerTick;
-            player.Y += player.InputY * speedPerTick;
+            (player.X, player.Y) = MovementSystem.Apply(
+                player.X,
+                player.Y,
+                player.InputX,
+                player.InputY,
+                speedPerTick
+            );
 
             players.Add(new PlayerSnapshot(player.Id, player.X, player.Y));
 
