@@ -58,5 +58,34 @@ namespace GameServer.Tests.Simulation
             Assert.Equal(expectedDelta, x, 5);
             Assert.Equal(expectedDelta, y, 5);
         }
+        [Fact]
+        public void MultipleTicks_AccumulateLinearly()
+        {
+            // Arrange
+            float x = 0f;
+            float y = 0f;
+
+            float inputX = 1f;
+            float inputY = 0f;
+
+            float speedPerTick = 0.1f;
+            int ticks = 10;
+
+            // Act
+            for (int i = 0; i < ticks; i++)
+            {
+                (x, y) = MovementSystem.Apply(
+                    x,
+                    y,
+                    inputX,
+                    inputY,
+                    speedPerTick
+                );
+            }
+            
+            // Assert
+            Assert.Equal(1.0f, x, 5);
+            Assert.Equal(0f, y, 5);
+        }
     }
 }

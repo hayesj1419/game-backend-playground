@@ -64,3 +64,28 @@ involve:
 
 If this test fails, speed clamping behavior has changed and must be reviewed
 before continuing development.
+
+
+---
+
+
+## Test 3: MultipleTicks_AccumulateLinearly
+
+### Purpose
+Verifies that repeated application of movement over multiple simulation ticks
+produces linear, deterministic position changes.
+
+### Scenario
+- Starting position: (0, 0)
+- Input: (1, 0)
+- Speed per tick: 0.1
+- Ticks: 10
+
+### Expected Result
+- X increases to 1.0
+- Y remains unchanged
+
+### What This Test Protects
+- Absence of hidden movement state
+- Deterministic behavior across ticks
+- Correct accumulation of movement over time

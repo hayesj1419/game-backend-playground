@@ -81,8 +81,6 @@ public static class WebSocketHandler
             {
                 player.InputX = input.X;
                 player.InputY = input.Y;
-
-                Console.WriteLine($"Received input: {input.X}, {input.Y}");
             }
         }
     }
