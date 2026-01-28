@@ -77,9 +77,6 @@ public class GameLoop
             );
 
             players.Add(new PlayerSnapshot(player.Id, player.X, player.Y));
-
-            player.InputX = 0;
-            player.InputY = 0;
         }
 
         if (_currentTick % _snapshotEveryNTicks == 0)
